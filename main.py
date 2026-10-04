@@ -15,7 +15,7 @@ from menu.menu_style import BRAND_STYLE
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ModelGenX - Masaüstü Arayüz Tasarımı")
+        self.setWindowTitle("ModelGenX - Masaüstü Veri Seti Üretim Aracı")
         self.setWindowIcon(QIcon("resimler/logo.png"))
         self.resize(1200, 750)
         self.setMinimumSize(950, 600)
@@ -26,17 +26,15 @@ class MainWindow(QMainWindow):
         self.current_cat_name = ""
         self.current_mod_name = ""
 
-        self.stacked_widget = QStackedWidget()
-        self.setCentralWidget(self.stacked_widget)
-
+        self.stacked_widget = QStackedWidget() #ana ekran ve modül ekranları arasında geçiş yapmak için
+        self.setCentralWidget(self.stacked_widget) #kaçıncı ekranın gösterileceğini kontrol eder
         self.dashboard_page = self.create_dashboard_page()
-        self.stacked_widget.addWidget(self.dashboard_page)
+        self.stacked_widget.addWidget(self.dashboard_page) 
         self.module_page = self.create_module_page()
         self.stacked_widget.addWidget(self.module_page)
+        self.stacked_widget.setCurrentIndex(0) #başlangıçta ana ekran gösterilir
 
-        self.stacked_widget.setCurrentIndex(0)
-
-    def create_dashboard_page(self):
+    def create_dashboard_page(self): # Ana Ekran (Dashboard) Oluşturur
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(36, 18, 36, 18)
@@ -60,7 +58,7 @@ class MainWindow(QMainWindow):
         if not logo_pixmap.isNull():
             logo_label.setPixmap(logo_pixmap.scaled(105, 105, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         
-        # Neon Işıma (Glow) Efekti
+        # Logoya Neon Işıma (Glow) Efekti
         glow_effect = QGraphicsDropShadowEffect(logo_label)
         glow_effect.setBlurRadius(28)
         glow_effect.setColor(QColor(112, 196, 255, 150))
@@ -84,13 +82,11 @@ class MainWindow(QMainWindow):
         tagline.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         tagline.setStyleSheet("color: #70C4FF; letter-spacing: 3px;")
         text_layout.addWidget(tagline)
-
         brand_layout.addLayout(text_layout)
         top_header_row.addWidget(brand_container)
-
         top_header_row.addStretch()
 
-        # SAĞ: Kutusuz ve Emojisiz Sade Tarih & Saat
+        # SAĞ: Tarih & Saat
         self.datetime_label = QLabel()
         self.datetime_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         self.datetime_label.setStyleSheet("""
@@ -100,7 +96,6 @@ class MainWindow(QMainWindow):
             padding: 8px 0px;
         """)
         top_header_row.addWidget(self.datetime_label, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
-
         layout.addLayout(top_header_row)
 
         # Altına İnce Gradyanlı Ayırıcı Çizgi (Divider)
@@ -132,12 +127,11 @@ class MainWindow(QMainWindow):
         grid.setSpacing(16)
         grid.setContentsMargins(0, 4, 0, 0)
 
-        for idx, cat in enumerate(self.categories):
+        for idx, cat in enumerate(self.categories): # Kategorileri ızgara şeklinde yerleştirir
             row = idx // 2
             col = idx % 2
             card = self.create_category_card(cat)
             grid.addWidget(card, row, col)
-
         layout.addWidget(grid_container, 1)
         return page
 
@@ -166,10 +160,9 @@ class MainWindow(QMainWindow):
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.clicked.connect(lambda checked, c=cat["name"], m=mod_name: self.open_module_view(c, m))
             card_layout.addWidget(btn)
-
         return card
 
-    def create_module_page(self):
+    def create_module_page(self): # Modül Çalışma Alanı Oluşturur
         page = QWidget()
         root_layout = QHBoxLayout(page)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -208,10 +201,9 @@ class MainWindow(QMainWindow):
 
         right_layout.addWidget(content_row, stretch=1)
         root_layout.addWidget(right_container, stretch=1)
-
         return page
 
-    def create_center_workspace(self):
+    def create_center_workspace(self): # Modül Çalışma Alanı Oluşturur
         center_widget = QWidget()
         center_widget.setStyleSheet("background-color: #030610;")
         layout = QVBoxLayout(center_widget)
@@ -238,13 +230,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.module_content_area, stretch=1)
         return center_widget
 
-    def on_category_changed(self, cat):
-        """Sol çubuktan bir kategoriye tıklandığında ilk modülünü açar."""
+    def on_category_changed(self, cat): # Sol çubuktan bir kategoriye tıklandığında ilk modülünü açar.
         modules = cat.get("modules", [])
         first_mod = modules[0] if modules else ""
         self.open_module_view(cat.get("name", ""), first_mod)
 
-    def open_module_view(self, cat_name, mod_name):
+    def open_module_view(self, cat_name, mod_name): # Seçilen kategori ve modülün çalışma alanını açar
         self.current_cat_name = cat_name
         self.current_mod_name = mod_name
 
@@ -253,7 +244,7 @@ class MainWindow(QMainWindow):
         if not target_cat and self.categories:
             target_cat = self.categories[0]
 
-        if target_cat:
+        if target_cat: # Seçilen kategoriye ait modülleri yükler ve sol çubukta aktif kategoriyi işaretler
             self.vertical_category_bar.set_active_category(target_cat.get("id"))
             self.top_module_bar.load_category_modules(target_cat, mod_name)
 
@@ -263,16 +254,16 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentIndex(1)
         self.log_panel_widget.append_log(f"Modül yüklendi ({mod_name})", "BİL")
 
-    def back_to_dashboard(self):
+    def back_to_dashboard(self): # Ana ekrana geri döner
         self.stacked_widget.setCurrentIndex(0)
 
-    def update_datetime(self):
+    def update_datetime(self): # Tarih ve saati günceller
         now = QDateTime.currentDateTime()
         date_str = now.toString("dd.MM.yyyy")
         time_str = now.toString("hh:mm:ss")
         self.datetime_label.setText(f"{date_str}   {time_str}")
 
-    def load_categories(self):
+    def load_categories(self): #json dosyasından modül ve kategori bilgilerini yükler
         config_path = os.path.join(os.path.dirname(__file__), "config_menu.json")
         if os.path.exists(config_path):
             try:
@@ -282,7 +273,6 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 print(f"Config hatası: {e}")
         return []
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

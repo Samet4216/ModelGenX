@@ -43,7 +43,7 @@ class VerticalCategoryBar(QFrame):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 12, 6, 12)
-        layout.setSpacing(18) # K'lar arası yukarı-aşağı genişletilmiş boşluk
+        layout.setSpacing(18) # K'lar arası yukarı-aşağı boşluk
         layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
         # 1. En Üst Logo Butonu (Dashboard'a dönüş)
@@ -81,16 +81,15 @@ class VerticalCategoryBar(QFrame):
             self.category_indices[cat_id] = idx
         layout.addStretch()
 
-    def on_category_pressed(self, cat):
+    def on_category_pressed(self, cat): # K1-K4 butonlarından birine tıklandığında aktif kategori olarak işaretler ve sinyal gönderir
         self.set_active_category(cat.get("id"))
         self.category_clicked.emit(cat)
 
-    def set_active_category(self, cat_id):
+    def set_active_category(self, cat_id): # K1-K4 butonlarından birini aktif/pasif yapar ve sağ kenar şerit rengini değiştirir
         self.active_category_id = cat_id
         for cid, btn in self.category_buttons.items():
             idx = self.category_indices.get(cid, 0)
             btn.setStyleSheet(get_category_button_style(idx, cid == cat_id))
-
 
 class TopModuleBar(QFrame):
     """
@@ -99,7 +98,6 @@ class TopModuleBar(QFrame):
     - Örn: 1.1 MODÜL   1.2 MODÜL   1.3 MODÜL
     """
     module_clicked = pyqtSignal(str, str) # cat_name, mod_name
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.current_category = None
@@ -119,19 +117,17 @@ class TopModuleBar(QFrame):
         self.tabs_layout = QHBoxLayout()
         self.tabs_layout.setSpacing(6)
         self.bar_layout.addLayout(self.tabs_layout)
-
         self.bar_layout.addStretch()
 
     def load_category_modules(self, cat, active_mod_name=None): #seçilen kategoriye ait modülleri yükler
         self.current_category = cat
-        self.module_buttons.clear()
+        self.module_buttons.clear() 
 
         # Eski sekmeleri temizle
         while self.tabs_layout.count():
             item = self.tabs_layout.takeAt(0)
             widget = item.widget()
-            if widget:
-                widget.deleteLater()
+            if widget: widget.deleteLater()
 
         modules = cat.get("modules", [])
         cat_name = cat.get("name", "")
@@ -140,8 +136,7 @@ class TopModuleBar(QFrame):
             if " " in mod_name and ("modül" in mod_name.lower() or "modul" in mod_name.lower()):
                 parts = mod_name.split()
                 tab_text = f"{parts[1]} {parts[0].upper()}"
-            else:
-                tab_text = mod_name.upper()
+            else: tab_text = mod_name.upper()
 
             btn = QPushButton(tab_text)
             btn.setFixedHeight(56)
@@ -153,8 +148,7 @@ class TopModuleBar(QFrame):
 
         # İstenen veya ilk modülü aktif yap
         target_mod = active_mod_name if active_mod_name in modules else (modules[0] if modules else None)
-        if target_mod:
-            self.set_active_module(target_mod)
+        if target_mod: self.set_active_module(target_mod)
 
     def on_module_pressed(self, cat_name, mod_name):
         self.set_active_module(mod_name)
