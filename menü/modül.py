@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QVariantAnimation, QEasingCurve, pyqtSignal
 from PyQt6.QtGui import QFont
+from menü.menü_style import HAMBURGER_EXPANDED, HAMBURGER_COLLAPSED
 
 class SidebarWidget(QFrame):
     # Modül tıklandığında ana ekrana bildiren sinyal
@@ -32,22 +33,7 @@ class SidebarWidget(QFrame):
         # Yeşil kutu ile gösterilen yer: Hamburger Menü Butonu & Başlık
         self.header_btn = QPushButton("☰   TÜM MODÜLLER")
         self.header_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.header_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #15243B;
-                border: 1px solid #1E3557;
-                border-radius: 8px;
-                color: #70C4FF;
-                font-size: 12px;
-                font-weight: bold;
-                padding: 10px 12px;
-                text-align: left;
-            }
-            QPushButton:hover {
-                background-color: #1E3557;
-                color: #FFFFFF;
-            }
-        """)
+        self.header_btn.setStyleSheet(HAMBURGER_EXPANDED)
         self.header_btn.clicked.connect(self.toggle_sidebar)
         self.main_layout.addWidget(self.header_btn)
         
@@ -93,22 +79,7 @@ class SidebarWidget(QFrame):
             self.animation.setStartValue(self.width())
             self.animation.setEndValue(self.collapsed_width)
             self.header_btn.setText("☰")
-            self.header_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #15243B;
-                    border: 1px solid #1E3557;
-                    border-radius: 8px;
-                    color: #70C4FF;
-                    font-size: 18px;
-                    font-weight: bold;
-                    padding: 8px 0px;
-                    text-align: center;
-                }
-                QPushButton:hover {
-                    background-color: #1E3557;
-                    color: #FFFFFF;
-                }
-            """)
+            self.header_btn.setStyleSheet(HAMBURGER_COLLAPSED)
             self.scroll_area.hide()
             self.is_expanded = False
         else:
@@ -116,22 +87,7 @@ class SidebarWidget(QFrame):
             self.animation.setStartValue(self.width())
             self.animation.setEndValue(self.expanded_width)
             self.header_btn.setText("☰   TÜM MODÜLLER")
-            self.header_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #15243B;
-                    border: 1px solid #1E3557;
-                    border-radius: 8px;
-                    color: #70C4FF;
-                    font-size: 12px;
-                    font-weight: bold;
-                    padding: 10px 12px;
-                    text-align: left;
-                }
-                QPushButton:hover {
-                    background-color: #1E3557;
-                    color: #FFFFFF;
-                }
-            """)
+            self.header_btn.setStyleSheet(HAMBURGER_EXPANDED)
             self.scroll_area.show()
             self.is_expanded = True
             
