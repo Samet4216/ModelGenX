@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QVariantAnimation, QEasingCurve, pyqtSignal
 from PyQt6.QtGui import QFont
-from menü.menü_style import HAMBURGER_EXPANDED, HAMBURGER_COLLAPSED
+from menu.menu_style import HAMBURGER_EXPANDED, HAMBURGER_COLLAPSED
 
 class SidebarWidget(QFrame):
     # Modül tıklandığında ana ekrana bildiren sinyal

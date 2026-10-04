@@ -64,7 +64,8 @@ QPushButton#ModuleBtn {{
     border: 1px solid {COLORS['BORDER']};
     border-radius: 10px;
     color: {COLORS['ACCENT_BLUE']};
-    padding: 14px 16px;
+    padding: 6px 16px;
+    min-height: 44px;
     text-align: left;
     font-size: 14px;
     font-weight: bold;

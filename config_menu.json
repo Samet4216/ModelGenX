@@ -1,0 +1,44 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Kategori 1",
+      "desc": "Temel İşlemler & Ayarlar",
+      "modules": [
+        "Modül 1.1",
+        "Modül 1.2",
+        "Modül 1.3"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Kategori 2",
+      "desc": "Veri Analizi & Filtreleme",
+      "modules": [
+        "Modül 2.1",
+        "Modül 2.2",
+        "Modül 2.3"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Kategori 3",
+      "desc": "Model Eğitimi & Üretim",
+      "modules": [
+        "Modül 3.1",
+        "Modül 3.2",
+        "Modül 3.3"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Kategori 4",
+      "desc": "Dışa Aktarma & Raporlama",
+      "modules": [
+        "Modül 4.1",
+        "Modül 4.2",
+        "Modül 4.3"
+      ]
+    }
+  ]
+}
