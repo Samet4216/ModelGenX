@@ -110,7 +110,7 @@ class TopModuleBar(QFrame):
         self.setStyleSheet(TOP_BAR_STYLE)
 
         self.bar_layout = QHBoxLayout(self)
-        self.bar_layout.setContentsMargins(18, 0, 18, 0)
+        self.bar_layout.setContentsMargins(18, 7, 18, 7)
         self.bar_layout.setSpacing(8)
 
         # Modüllerin dinamik olarak dizileceği yatay konteyner
@@ -139,7 +139,7 @@ class TopModuleBar(QFrame):
             else: tab_text = mod_name.upper()
 
             btn = QPushButton(tab_text)
-            btn.setFixedHeight(56)
+            btn.setFixedHeight(42)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.clicked.connect(lambda checked, c=cat_name, m=mod_name: self.on_module_pressed(c, m))
             
@@ -156,5 +156,6 @@ class TopModuleBar(QFrame):
 
     def set_active_module(self, mod_name):
         self.active_mod_name = mod_name
+        cat_idx = (self.current_category.get("id", 1) - 1) if self.current_category else 0
         for mname, btn in self.module_buttons.items():
-            btn.setStyleSheet(get_top_module_button_style(mname == mod_name))
+            btn.setStyleSheet(get_top_module_button_style(cat_idx, mname == mod_name))

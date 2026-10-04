@@ -181,6 +181,10 @@ CATEGORY_THEMES = [
         "active_border": "#4D1017",
         "active_bg": "#14070A",
         "active_text": "#FFA8AF",
+        "tab_active_bg": "#2A0B12",
+        "tab_active_border": "#7A1A24",
+        "tab_active_stripe": "#FF3B4E",
+        "tab_active_text": "#FFFFFF",
     },
     {  # K2: Kapalı Mor
         "inactive_stripe": "#5E2779",
@@ -188,6 +192,10 @@ CATEGORY_THEMES = [
         "active_border": "#351247",
         "active_bg": "#110618",
         "active_text": "#DBA3F5",
+        "tab_active_bg": "#1F0A2C",
+        "tab_active_border": "#5E1E82",
+        "tab_active_stripe": "#BD42FA",
+        "tab_active_text": "#FFFFFF",
     },
     {  # K3: Kapalı Gri / Beyazlı
         "inactive_stripe": "#5A677B",
@@ -195,6 +203,10 @@ CATEGORY_THEMES = [
         "active_border": "#64748B",
         "active_bg": "#2E3A4B",
         "active_text": "#FFFFFF",
+        "tab_active_bg": "#283445",
+        "tab_active_border": "#64748B",
+        "tab_active_stripe": "#F1F5F9",
+        "tab_active_text": "#FFFFFF",
     },
     {  # K4: Kapalı Yeşil
         "inactive_stripe": "#1B5E38",
@@ -202,6 +214,10 @@ CATEGORY_THEMES = [
         "active_border": "#0F331F",
         "active_bg": "#05140C",
         "active_text": "#7EE5A7",
+        "tab_active_bg": "#0A2616",
+        "tab_active_border": "#1B663A",
+        "tab_active_stripe": "#2FE07A",
+        "tab_active_text": "#FFFFFF",
     },
 ]
 
@@ -272,33 +288,45 @@ QFrame {
 }
 """
 
-def get_top_module_button_style(active: bool = False) -> str:
-    """Üst bar sekmelerinin (1.1 MODÜL vb.) aktif/pasif durum stillerini döner."""
+def get_top_module_button_style(cat_idx: int = 0, active: bool = False) -> str:
+    """Üst bar sekmelerinin (1.1 MODÜL vb.) aktif kategori rengine göre belirgin kutu stilini döner."""
+    theme = CATEGORY_THEMES[cat_idx % len(CATEGORY_THEMES)]
     if active:
-        return """
-            QPushButton {
-                background-color: transparent;
-                border: none;
-                border-bottom: 3px solid #70C4FF;
-                color: #FFFFFF;
+        return f"""
+            QPushButton {{
+                background-color: {theme['tab_active_bg']};
+                border: 1px solid {theme['tab_active_border']};
+                border-bottom: 3px solid {theme['tab_active_stripe']};
+                border-radius: 6px;
+                color: {theme['tab_active_text']};
                 font-size: 13px;
                 font-weight: bold;
                 padding: 0 18px;
-            }
+            }}
         """
     else:
         return """
             QPushButton {
                 background-color: transparent;
-                border: none;
+                border: 1px solid transparent;
                 border-bottom: 3px solid transparent;
-                color: #4A6382;
+                border-radius: 6px;
+                color: #5A7699;
                 font-size: 13px;
                 font-weight: 500;
                 padding: 0 18px;
             }
             QPushButton:hover {
-                color: #70C4FF;
-                background-color: #0B1626;
+                background-color: #0E1B33;
+                border: 1px solid #1E3557;
+                color: #B0C4DE;
             }
         """
+
+# ----------------- ALT SİSTEM DURUM ÇUBUĞU STİLİ ----------------- #
+STATUS_BAR_STYLE = """
+QFrame#SystemStatusBar {
+    background-color: #040812;
+    border-top: 1px solid #101E33;
+}
+"""

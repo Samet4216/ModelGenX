@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTime, QTimer, QD
 from PyQt6.QtGui import QFont, QIcon, QColor, QPixmap
 from log.log_paneli import LogPanelWidget
 from menu.menu import VerticalCategoryBar, TopModuleBar
+from menu.sistem_bar import SystemStatusBar
 from menu.menu_style import BRAND_STYLE
 
 class MainWindow(QMainWindow):
@@ -200,6 +201,11 @@ class MainWindow(QMainWindow):
         content_row_layout.addWidget(self.log_panel_widget)
 
         right_layout.addWidget(content_row, stretch=1)
+
+        # 3. EN ALT CANLI SİSTEM DURUM ÇUBUĞU (Gerçek Donanım Verileri: GPU, VRAM, RAM, CPU)
+        self.system_status_bar = SystemStatusBar()
+        right_layout.addWidget(self.system_status_bar)
+
         root_layout.addWidget(right_container, stretch=1)
         return page
 
