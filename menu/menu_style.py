@@ -171,3 +171,134 @@ QPushButton:hover {{
     color: #FFFFFF;
 }}
 """
+
+# ----------------- KATEGORİ RENK TEMALARI ----------------- #
+# K1: Kapalı Kırmızı, K2: Kapalı Mor, K3: Kapalı Gri, K4: Kapalı Yeşil
+CATEGORY_THEMES = [
+    {  # K1: Kapalı Kırmızı
+        "inactive_stripe": "#8B1E28",
+        "active_stripe": "#B82835",
+        "active_border": "#4D1017",
+        "active_bg": "#14070A",
+        "active_text": "#FFA8AF",
+    },
+    {  # K2: Kapalı Mor
+        "inactive_stripe": "#5E2779",
+        "active_stripe": "#8A37B3",
+        "active_border": "#351247",
+        "active_bg": "#110618",
+        "active_text": "#DBA3F5",
+    },
+    {  # K3: Kapalı Gri / Beyazlı
+        "inactive_stripe": "#5A677B",
+        "active_stripe": "#E2E8F0",
+        "active_border": "#64748B",
+        "active_bg": "#2E3A4B",
+        "active_text": "#FFFFFF",
+    },
+    {  # K4: Kapalı Yeşil
+        "inactive_stripe": "#1B5E38",
+        "active_stripe": "#288852",
+        "active_border": "#0F331F",
+        "active_bg": "#05140C",
+        "active_text": "#7EE5A7",
+    },
+]
+
+# ----------------- SOL DİKEY KATEGORİ ÇUBUĞU STİLLERİ ----------------- #
+VERTICAL_BAR_STYLE = """
+QFrame {
+    background-color: #060C17;
+    border-right: 1px solid #101E33;
+}
+"""
+
+VERTICAL_LOGO_BTN_STYLE = """
+QPushButton {
+    background-color: #091322;
+    border: 1px solid #15243B;
+    border-radius: 8px;
+}
+QPushButton:hover {
+    border: 1px solid #70C4FF;
+    background-color: #0E1B33;
+}
+"""
+
+VERTICAL_SEP_STYLE = """
+background-color: #101E33;
+border: none;
+"""
+
+def get_category_button_style(cat_idx: int, active: bool = False) -> str:
+    """K1-K4 butonlarının aktif/pasif stillerini ve sağ kenar şerit renklerini döner."""
+    theme = CATEGORY_THEMES[cat_idx % len(CATEGORY_THEMES)]
+    if active:
+        return f"""
+            QPushButton {{
+                background-color: {theme['active_bg']};
+                border: 1px solid {theme['active_border']};
+                border-right: 4px solid {theme['active_stripe']};
+                border-radius: 6px;
+                color: {theme['active_text']};
+                font-size: 13px;
+                font-weight: bold;
+            }}
+        """
+    else:
+        return f"""
+            QPushButton {{
+                background-color: #050B14;
+                border: 1px solid #0F1D33;
+                border-right: 4px solid {theme['inactive_stripe']};
+                border-radius: 6px;
+                color: #7A8B9E;
+                font-size: 13px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: #0E1B33;
+                border: 1px solid #1E3557;
+                border-right: 4px solid {theme['active_stripe']};
+                color: #FFFFFF;
+            }}
+        """
+
+# ----------------- ÜST YATAY MODÜL ÇUBUĞU STİLLERİ ----------------- #
+TOP_BAR_STYLE = """
+QFrame {
+    background-color: #060C17;
+    border-bottom: 1px solid #101E33;
+}
+"""
+
+def get_top_module_button_style(active: bool = False) -> str:
+    """Üst bar sekmelerinin (1.1 MODÜL vb.) aktif/pasif durum stillerini döner."""
+    if active:
+        return """
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                border-bottom: 3px solid #70C4FF;
+                color: #FFFFFF;
+                font-size: 13px;
+                font-weight: bold;
+                padding: 0 18px;
+            }
+        """
+    else:
+        return """
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                border-bottom: 3px solid transparent;
+                color: #4A6382;
+                font-size: 13px;
+                font-weight: 500;
+                padding: 0 18px;
+            }
+            QPushButton:hover {
+                color: #70C4FF;
+                background-color: #0B1626;
+            }
+        """

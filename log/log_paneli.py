@@ -4,7 +4,16 @@ from PyQt6.QtWidgets import (
     QTextEdit, QLineEdit, QFileDialog, QMenu
 )
 from PyQt6.QtCore import Qt, QVariantAnimation, QEasingCurve, QTime
-from PyQt6.QtGui import QFont, QAction
+from PyQt6.QtGui import QFont
+
+# Log Seviyeleri ve Renk Paleti (Türkçe Standart Tanımlar)
+LOG_LEVELS = {
+    "BİL": ("BİL", "#38BDF8"),  # Bilgi (Açık Mavi)
+    "SİS": ("SİS", "#70C4FF"),  # Sistem (Cyan)
+    "UYR": ("UYR", "#F59E0B"),  # Uyarı (Turuncu)
+    "HTA": ("HTA", "#EF4444"),  # Hata (Kırmızı)
+    "DTY": ("DTY", "#8CA6BE"),  # Detay (Gri)
+}
 
 class LogPanelWidget(QWidget):
     def __init__(self, parent=None):
@@ -65,7 +74,7 @@ class LogPanelWidget(QWidget):
 
         # Log Başlık Alanı
         log_header = QHBoxLayout()
-        log_title = QLabel("📟 Sistem Logları")
+        log_title = QLabel("LOG PANELİ")
         log_title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         log_title.setStyleSheet("color: #70C4FF;") # Açık Mavi
 
@@ -180,25 +189,22 @@ class LogPanelWidget(QWidget):
             self.is_drawer_open = True
             self.log_handle_btn.setText("▶")
 
-    def append_log(self, text, level="INFO"):
-        """Log ekleme metodu. Renkli seviyeler (INFO, WARNING, ERROR, DEBUG, SYSTEM) destekler."""
+    def append_log(self, text, level="BİL"):
+        """Log ekleme metodu. Üstte soluk saat (hh:mm:ssZ), altta renkli etiket (SİS, BİL, UYR, HTA, DTY) ve mesaj gösterir."""
         time_str = QTime.currentTime().toString("hh:mm:ss")
+        tag, color = LOG_LEVELS.get(level.upper(), (level.upper()[:3], "#70C4FF"))
         
-        # Seviyelere göre renkler
-        colors = {
-            "INFO": "#E4F9ED",     # Yeşilimsi beyaz
-            "WARNING": "#F59E0B",  # Turuncu/Sarı
-            "ERROR": "#EF4444",    # Kırmızı
-            "DEBUG": "#8CA6BE",    # Soluk mavi/gri
-            "SYSTEM": "#70C4FF"    # Açık mavi
-        }
-        color = colors.get(level.upper(), "#E4F9ED")
-        
-        # Gösterilecek HTML string'i
-        html_str = f'<span style="color:#8CA6BE">[{time_str}]</span> <b style="color:{color}">[{level.upper()}]</b> <span style="color:#E4F9ED">{text}</span>'
+        # Gösterilecek HTML formatı: Üstte soluk saat, altta renkli etiket ve mesaj
+        html_str = (
+            f'<div style="margin-bottom: 10px;">'
+            f'<span style="color: #4A6572; font-size: 11px; font-family: Consolas, monospace;">{time_str}Z</span><br>'
+            f'<b style="color: {color}; font-size: 12px; font-family: Consolas, monospace;">{tag}</b> '
+            f'<span style="color: #E4F9ED; font-size: 12px;">{text}</span>'
+            f'</div>'
+        )
         
         # Saf metin formatı (Export ve Arama için)
-        raw_str = f"[{time_str}] [{level.upper()}] {text}"
+        raw_str = f"[{time_str}Z] [{tag}] {text}"
         
         self._log_history.append({
             "raw": raw_str,
@@ -235,7 +241,7 @@ class LogPanelWidget(QWidget):
         self.log_output.clear()
         self._log_history.clear()
         self.search_bar.clear()
-        self.append_log("Log geçmişi temizlendi.", "SYSTEM")
+        self.append_log("Log temizlendi", "SİS")
 
     def export_logs(self):
         """Logları .txt veya .log olarak bilgisayara kaydeder."""
@@ -251,9 +257,9 @@ class LogPanelWidget(QWidget):
                 with open(file_path, "w", encoding="utf-8") as f:
                     for log in self._log_history:
                         f.write(log["raw"] + "\n")
-                self.append_log(f"Loglar başarıyla kaydedildi: {os.path.basename(file_path)}", "SYSTEM")
+                self.append_log(f"Loglar başarıyla kaydedildi: {os.path.basename(file_path)}", "SİS")
             except Exception as e:
-                self.append_log(f"Log kaydetme hatası: {str(e)}", "ERROR")
+                self.append_log(f"Log kaydetme hatası: {str(e)}", "HTA")
 
     def show_context_menu(self, pos):
         """Sağ tık menüsünü gösterir."""
@@ -273,12 +279,8 @@ class LogPanelWidget(QWidget):
         select_all_action = menu.addAction("Tümünü Seç")
         menu.addSeparator()
         clear_action = menu.addAction("Temizle")
-
         action = menu.exec(self.log_output.mapToGlobal(pos))
         
-        if action == copy_action:
-            self.log_output.copy()
-        elif action == select_all_action:
-            self.log_output.selectAll()
-        elif action == clear_action:
-            self.clear_logs()
+        if action == copy_action: self.log_output.copy()
+        elif action == select_all_action: self.log_output.selectAll()
+        elif action == clear_action: self.clear_logs()

@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTime, QTimer, QDateTime
 from PyQt6.QtGui import QFont, QIcon, QColor, QPixmap
 from log.log_paneli import LogPanelWidget
-from menu.modul import SidebarWidget
+from menu.menu import VerticalCategoryBar, TopModuleBar
 from menu.menu_style import BRAND_STYLE
 
 class MainWindow(QMainWindow):
@@ -23,7 +23,6 @@ class MainWindow(QMainWindow):
 
         # Veri Yapısı (config.json dosyasından dinamik olarak yüklenir)
         self.categories = self.load_categories()
-
         self.current_cat_name = ""
         self.current_mod_name = ""
 
@@ -32,7 +31,6 @@ class MainWindow(QMainWindow):
 
         self.dashboard_page = self.create_dashboard_page()
         self.stacked_widget.addWidget(self.dashboard_page)
-
         self.module_page = self.create_module_page()
         self.stacked_widget.addWidget(self.module_page)
 
@@ -173,48 +171,44 @@ class MainWindow(QMainWindow):
 
     def create_module_page(self):
         page = QWidget()
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(0, 0, 0, 0)
-        page_layout.setSpacing(0)
+        root_layout = QHBoxLayout(page)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
 
-        top_bar = QFrame()
-        top_bar.setObjectName("TopBar")
-        top_bar_layout = QHBoxLayout(top_bar)
-        top_bar_layout.setContentsMargins(16, 12, 16, 12)
+        # 1. SOL DİKEY KATEGORİ ÇUBUĞU (K1, K2, K3, K4)
+        self.vertical_category_bar = VerticalCategoryBar(self.categories)
+        self.vertical_category_bar.category_clicked.connect(self.on_category_changed)
+        self.vertical_category_bar.home_clicked.connect(self.back_to_dashboard)
+        root_layout.addWidget(self.vertical_category_bar)
 
-        back_btn = QPushButton("⬅ Ana Menüye Dön")
-        back_btn.setObjectName("NavBtn")
-        back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        back_btn.clicked.connect(self.back_to_dashboard)
-        top_bar_layout.addWidget(back_btn)
+        # 2. SAĞ ANA ALAN (Üstte tam sağa uzanan Modül Çubuğu + Altta İçerik & Log Paneli)
+        right_container = QWidget()
+        right_layout = QVBoxLayout(right_container)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
 
-        self.breadcrumb_label = QLabel("Kategori 1 > Modül 1.1")
-        self.breadcrumb_label.setFont(QFont("Segoe UI", 14, QFont.Weight.DemiBold))
-        self.breadcrumb_label.setStyleSheet("color: #70C4FF; margin-left: 16px;") # Açık Mavi
-        top_bar_layout.addWidget(self.breadcrumb_label)
+        # Üst Yatay Modül Çubuğu - Pencerenin en sağına kadar uzanır
+        self.top_module_bar = TopModuleBar()
+        self.top_module_bar.module_clicked.connect(self.open_module_view)
+        right_layout.addWidget(self.top_module_bar)
 
-        top_bar_layout.addStretch()
-        page_layout.addWidget(top_bar)
-
+        # Alt Bölüm: Solda Çalışma Alanı + Sağda Üst Menünün Altından Başlayan Log Çekmecesi
         content_row = QWidget()
         content_row_layout = QHBoxLayout(content_row)
         content_row_layout.setContentsMargins(0, 0, 0, 0)
         content_row_layout.setSpacing(0)
 
-        # 1. SOL KENAR ÇUBUĞU (menü/modül.py dosyasından gelen katlanabilir hamburger menü)
-        self.sidebar_widget = SidebarWidget(self.categories)
-        self.sidebar_widget.module_clicked.connect(self.open_module_view)
-        content_row_layout.addWidget(self.sidebar_widget)
-
-        # 2. ORTA ÇALIŞMA ALANI (Modül Ekranı)
+        # Modül Çalışma Alanı
         self.center_area = self.create_center_workspace()
         content_row_layout.addWidget(self.center_area, stretch=1)
 
-        # 3. SAĞ LOG ÇEKMECESİ (Harici dosyadan LogPanelWidget)
+        # Sağ Log Çekmecesi (Üst menünün altından başlar)
         self.log_panel_widget = LogPanelWidget()
         content_row_layout.addWidget(self.log_panel_widget)
 
-        page_layout.addWidget(content_row, stretch=1)
+        right_layout.addWidget(content_row, stretch=1)
+        root_layout.addWidget(right_container, stretch=1)
+
         return page
 
     def create_center_workspace(self):
@@ -244,18 +238,30 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.module_content_area, stretch=1)
         return center_widget
 
+    def on_category_changed(self, cat):
+        """Sol çubuktan bir kategoriye tıklandığında ilk modülünü açar."""
+        modules = cat.get("modules", [])
+        first_mod = modules[0] if modules else ""
+        self.open_module_view(cat.get("name", ""), first_mod)
+
     def open_module_view(self, cat_name, mod_name):
         self.current_cat_name = cat_name
         self.current_mod_name = mod_name
 
-        self.breadcrumb_label.setText(f"{cat_name}  ❯  {mod_name}")
-        self.mod_title_label.setText(f"{mod_name} Yönetim Alanı")
+        # İlgili kategoriyi bul
+        target_cat = next((c for c in self.categories if c.get("name") == cat_name), None)
+        if not target_cat and self.categories:
+            target_cat = self.categories[0]
+
+        if target_cat:
+            self.vertical_category_bar.set_active_category(target_cat.get("id"))
+            self.top_module_bar.load_category_modules(target_cat, mod_name)
+
+        self.mod_title_label.setText(f"{cat_name.upper()}  /  {mod_name.upper()} YÖNETİM ALANI")
         self.mod_desc_label.setText(f"{cat_name} altındaki {mod_name} modülünün aktif çalışma ekranı.")
 
-        self.sidebar_widget.set_active_module(cat_name, mod_name)
-
         self.stacked_widget.setCurrentIndex(1)
-        self.log_panel_widget.append_log(f"'{cat_name} > {mod_name}' modülüne geçiş yapıldı.", "INFO")
+        self.log_panel_widget.append_log(f"Modül yüklendi ({mod_name})", "BİL")
 
     def back_to_dashboard(self):
         self.stacked_widget.setCurrentIndex(0)
