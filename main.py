@@ -227,9 +227,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.mod_desc_label)
 
         self.module_content_area = QFrame()
+        self.module_content_area.setLayout(QVBoxLayout())
+        self.module_content_area.layout().setContentsMargins(0, 0, 0, 0)
         self.module_content_area.setStyleSheet("""
             background-color: #080F1C;
-            border: 1px dashed #15243B;
+            border: none;
             border-radius: 12px;
         """)
         
@@ -256,6 +258,27 @@ class MainWindow(QMainWindow):
 
         self.mod_title_label.setText(f"{cat_name.upper()}  /  {mod_name.upper()} YÖNETİM ALANI")
         self.mod_desc_label.setText(f"{cat_name} altındaki {mod_name} modülünün aktif çalışma ekranı.")
+
+        # Çalışma alanındaki eski widget'ları temizle
+        layout = self.module_content_area.layout()
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+        # Doğru modülü yükle
+        if cat_name == "Kategori 1" and mod_name == "Modül 1.1":
+            from Frame_islemleri.indirme_modulu.app import IndirmeModuluApp
+            mod_app = IndirmeModuluApp()
+            # Modülden gelen log sinyallerini ana penceredeki log paneline bağla
+            mod_app.send_log_signal.connect(lambda level, msg: self.log_panel_widget.append_log(msg, level))
+            layout.addWidget(mod_app)
+        else:
+            # Boş veya henüz yapılmamış modüller için varsayılan mesaj
+            empty_lbl = QLabel("Bu modül henüz sisteme entegre edilmedi.")
+            empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty_lbl.setStyleSheet("color: #9BAEBC; font-size: 16px; border: 1px dashed #15243B; border-radius: 12px;")
+            layout.addWidget(empty_lbl)
 
         self.stacked_widget.setCurrentIndex(1)
         self.log_panel_widget.append_log(f"Modül yüklendi ({mod_name})", "BİL")
