@@ -4,14 +4,15 @@ import json
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGridLayout, QLabel, QPushButton, QFrame, QStackedWidget,
-    QScrollArea, QSizePolicy, QGraphicsDropShadowEffect
+    QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTime, QTimer, QDateTime
+from PyQt6.QtCore import Qt, QTimer, QDateTime
 from PyQt6.QtGui import QFont, QIcon, QColor, QPixmap
 from log.log_paneli import LogPanelWidget
 from menu.menu import VerticalCategoryBar, TopModuleBar
 from menu.sistem_bar import SystemStatusBar
 from menu.menu_style import BRAND_STYLE
+from menu.toast import ToastNotification
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -34,6 +35,19 @@ class MainWindow(QMainWindow):
         self.module_page = self.create_module_page()
         self.stacked_widget.addWidget(self.module_page)
         self.stacked_widget.setCurrentIndex(0) #başlangıçta ana ekran gösterilir
+        
+        # Toast Bildirimi (En üste yerleşmesi için parent olarak MainWindow verilir)
+        self.toast_notification = ToastNotification(self)
+
+    def show_toast(self, message):
+        self.toast_notification.show_toast(message)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Ekran boyutu değiştiğinde toast'un konumunu güncellemek için gizleyebiliriz veya anında taşıyabiliriz.
+        if hasattr(self, 'toast_notification') and self.toast_notification.isVisible():
+            # Basitçe ekran boyutlandırılırsa toast'u kapat
+            self.toast_notification.hide()
 
     def create_dashboard_page(self): # Ana Ekran (Dashboard) Oluşturur
         page = QWidget()
@@ -211,7 +225,8 @@ class MainWindow(QMainWindow):
 
     def create_center_workspace(self): # Modül Çalışma Alanı Oluşturur
         center_widget = QWidget()
-        center_widget.setStyleSheet("background-color: #030610;")
+        center_widget.setObjectName("CenterWidget")
+        center_widget.setStyleSheet("QWidget#CenterWidget { background-color: #030610; }")
         layout = QVBoxLayout(center_widget)
         layout.setContentsMargins(36, 36, 36, 36)
         layout.setSpacing(20)
@@ -226,16 +241,19 @@ class MainWindow(QMainWindow):
         self.mod_desc_label.setStyleSheet("color: #9BAEBC;")
         layout.addWidget(self.mod_desc_label)
 
-        self.module_content_area = QFrame()
-        self.module_content_area.setLayout(QVBoxLayout())
-        self.module_content_area.layout().setContentsMargins(0, 0, 0, 0)
+        # Arka planda çalışmaya devam edebilmesi için StackedWidget kullanıyoruz
+        self.module_content_area = QStackedWidget()
         self.module_content_area.setStyleSheet("""
-            background-color: #080F1C;
-            border: none;
-            border-radius: 12px;
+            QStackedWidget {
+                background-color: transparent;
+                border: none;
+            }
         """)
         
         layout.addWidget(self.module_content_area, stretch=1)
+        
+        # Modül örneklerini (instance) hafızada tutmak için sözlük
+        self.module_instances = {}
         return center_widget
 
     def on_category_changed(self, cat): # Sol çubuktan bir kategoriye tıklandığında ilk modülünü açar.
@@ -259,29 +277,28 @@ class MainWindow(QMainWindow):
         self.mod_title_label.setText(f"{cat_name.upper()}  /  {mod_name.upper()} YÖNETİM ALANI")
         self.mod_desc_label.setText(f"{cat_name} altındaki {mod_name} modülünün aktif çalışma ekranı.")
 
-        # Çalışma alanındaki eski widget'ları temizle
-        layout = self.module_content_area.layout()
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        # Modül anahtarı
+        module_key = f"{cat_name}_{mod_name}"
+        # Eğer modül daha önce açılmadıysa oluştur ve kaydet
+        if module_key not in getattr(self, 'module_instances', {}):
+            if cat_name == "Kategori 1" and mod_name == "Modül 1.1":
+                from Frame_islemleri.indirme_modulu.app import IndirmeModuluApp
+                mod_app = IndirmeModuluApp()
+                # Modülden gelen log sinyallerini ana penceredeki log paneline bağla
+                mod_app.send_log_signal.connect(lambda level, msg: self.log_panel_widget.append_log(msg, level))
+                self.module_instances[module_key] = mod_app
+                self.module_content_area.addWidget(mod_app)
+            else:
+                # Boş veya henüz yapılmamış modüller için varsayılan mesaj
+                empty_lbl = QLabel("Bu modül henüz sisteme entegre edilmedi.")
+                empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                empty_lbl.setStyleSheet("color: #9BAEBC; font-size: 16px; border: 1px dashed #15243B; border-radius: 12px;")
+                self.module_instances[module_key] = empty_lbl
+                self.module_content_area.addWidget(empty_lbl)
 
-        # Doğru modülü yükle
-        if cat_name == "Kategori 1" and mod_name == "Modül 1.1":
-            from Frame_islemleri.indirme_modulu.app import IndirmeModuluApp
-            mod_app = IndirmeModuluApp()
-            # Modülden gelen log sinyallerini ana penceredeki log paneline bağla
-            mod_app.send_log_signal.connect(lambda level, msg: self.log_panel_widget.append_log(msg, level))
-            layout.addWidget(mod_app)
-        else:
-            # Boş veya henüz yapılmamış modüller için varsayılan mesaj
-            empty_lbl = QLabel("Bu modül henüz sisteme entegre edilmedi.")
-            empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty_lbl.setStyleSheet("color: #9BAEBC; font-size: 16px; border: 1px dashed #15243B; border-radius: 12px;")
-            layout.addWidget(empty_lbl)
-
+        # Aktif olan widget'ı ekranda göster (arka plandakiler çalışmaya devam eder)
+        self.module_content_area.setCurrentWidget(self.module_instances[module_key])
         self.stacked_widget.setCurrentIndex(1)
-        self.log_panel_widget.append_log(f"Modül yüklendi ({mod_name})", "BİL")
 
     def back_to_dashboard(self): # Ana ekrana geri döner
         self.stacked_widget.setCurrentIndex(0)

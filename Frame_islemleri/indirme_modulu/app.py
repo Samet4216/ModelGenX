@@ -1,10 +1,11 @@
 import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QPushButton, QProgressBar, QFileDialog, QMessageBox,
-                             QDialog, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView)
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+                             QDialog, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QMenu)
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint
 
 from Frame_islemleri.indirme_modulu.downloader import InfoExtractorThread, DownloadWorker
+from Frame_islemleri.indirme_modulu.indir_style import *
 
 class DownloadSlotWidget(QWidget):
     slot_freed = pyqtSignal() # İndirme bitince veya hata verince ana kuyruğa haber vermek için
@@ -13,66 +14,102 @@ class DownloadSlotWidget(QWidget):
         super().__init__()
         self.parent_app = parent_app
         self.worker = None
-        self.setMinimumHeight(45) # Slotları biraz daha büyüttüm
+        self.is_free = True # Slotun boş/dolu durumunu tutar (isVisible yerine bunu kullanmalıyız)
+        self.setMinimumHeight(65) # Barlar ve yazılar büyüdüğü için yüksekliği ayarladık
         self.setup_ui()
         self.hide() # Başlangıçta gizli
 
     def setup_ui(self):
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 5, 0, 5)
+        # Ana layout dikey (alt alta) olacak
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 5, 0, 5)
+        main_layout.setSpacing(8) # Yazı ile barı arasına biraz daha nefes alma boşluğu eklendi
         
-        # Durum İkonu (Kum saati, tik veya çarpı)
-        self.icon_lbl = QLabel("⏳")
-        self.icon_lbl.setFixedWidth(25)
+        # Üst kısım: İkon (Tıklanabilir) ve Yazı
+        top_layout = QHBoxLayout()
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.icon_btn = QPushButton("⏳")
+        self.icon_btn.setFixedWidth(25)
+        self.icon_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.icon_btn.setStyleSheet(SLOT_ICON_DEFAULT_STYLE)
+        self.icon_btn.clicked.connect(self.show_action_menu)
         
         # Video Adı
         self.title_lbl = QLabel("")
-        self.title_lbl.setStyleSheet("color: #E2E8F0; font-size: 14px; font-weight: bold;")
+        self.title_lbl.setStyleSheet(SLOT_TITLE_STYLE)
         
-        # İlerleme Çubuğu
+        self.percent_lbl = QLabel("0%")
+        self.percent_lbl.setStyleSheet(SLOT_PERCENT_DEFAULT_STYLE)
+        
+        top_layout.addWidget(self.icon_btn)
+        top_layout.addWidget(self.title_lbl)
+        top_layout.addStretch() # Sola yaslanması için
+        top_layout.addWidget(self.percent_lbl)
+        
+        # Alt kısım: İlerleme Çubuğu
         self.progress_bar = QProgressBar()
-        self.progress_bar.setFixedHeight(24) # Bar çubuğu daha kalın ve belirgin
-        self.progress_bar.setTextVisible(True)
-        self.progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.progress_bar.setFixedHeight(8) # İnceltildi
+        self.progress_bar.setTextVisible(False)
         self.update_progress_style(0)
         
-        layout.addWidget(self.icon_lbl)
-        layout.addWidget(self.title_lbl, stretch=1)
-        layout.addWidget(self.progress_bar, stretch=2)
+        main_layout.addLayout(top_layout)
+        main_layout.addWidget(self.progress_bar)
+        
+        # Hayati Dokunuş: Elemanları yukarı iter ve aralarının açılmasını (dağılmasını) kesin olarak engeller
+        main_layout.addStretch()
+
+    def set_error_style(self):
+        self.progress_bar.setStyleSheet(SLOT_PROGRESS_ERROR_STYLE)
+        self.percent_lbl.setStyleSheet(SLOT_PERCENT_ERROR_STYLE)
 
     def update_progress_style(self, value):
-        # Kırmızıdan (#B80000) Yeşile (#10B981) dinamik renk geçişi
-        r = int(184 + (16 - 184) * (value / 100.0))
-        g = int(0 + (185 - 0) * (value / 100.0))
-        b = int(0 + (129 - 0) * (value / 100.0))
-        color_hex = f"#{r:02X}{g:02X}{b:02X}"
-
-        self.progress_bar.setStyleSheet(f"""
-            QProgressBar {{
-                background-color: #060C17;
-                border: 1px solid #1E293B;
-                border-radius: 12px;
-                color: white;
-                font-weight: bold;
-                font-size: 13px; /* Yüzdelik yazısı daha büyük */
-            }}
-            QProgressBar::chunk {{
-                background-color: {color_hex};
-                border-radius: 11px;
-            }}
-        """)
+        self.progress_bar.setStyleSheet(get_progress_style(value))
 
     def update_progress(self, value):
         self.progress_bar.setValue(value)
+        self.percent_lbl.setText(f"%{value}")
         self.update_progress_style(value)
 
+    def show_action_menu(self):
+        if not self.worker or not self.worker.isRunning(): return
+
+        menu = QMenu(self)
+        menu.setStyleSheet(ACTION_MENU_STYLE)
+
+        pause_action = menu.addAction("⏸ Duraklat")
+        resume_action = menu.addAction("▶️ Sürdür")
+        cancel_action = menu.addAction("❌ İptal Et")
+
+        if self.worker.is_paused: pause_action.setEnabled(False)
+        else: resume_action.setEnabled(False)
+
+        action = menu.exec(self.icon_btn.mapToGlobal(QPoint(0, self.icon_btn.height())))
+
+        if action == pause_action:
+            self.worker.pause()
+            self.icon_btn.setText("⏸")
+            self.icon_btn.setStyleSheet(SLOT_ICON_PAUSED_STYLE)
+            if not self.title_lbl.text().startswith("Duraklatıldı:"):
+                self.title_lbl.setText("Duraklatıldı: " + self.title_lbl.text())
+        elif action == resume_action:
+            self.worker.resume()
+            self.icon_btn.setText("⬇️")
+            self.icon_btn.setStyleSheet(SLOT_ICON_DEFAULT_STYLE)
+            self.title_lbl.setText(self.title_lbl.text().replace("Duraklatıldı: ", ""))
+        elif action == cancel_action:
+            self.worker.cancel()
+
     def start(self, video_dict, save_dir):
+        self.is_free = False
         self.show()
-        self.icon_lbl.setText("⬇️")
+        self.icon_btn.setText("⬇️")
+        self.icon_btn.setStyleSheet(SLOT_ICON_DEFAULT_STYLE)
         
-        # İsmi kısaltarak gösterelim ki bar taşmasın
+        # İsmi eskisi gibi kısa kesiyoruz (35 harf + ...)
         short_title = video_dict['title'][:35] + "..." if len(video_dict['title']) > 35 else video_dict['title']
         self.title_lbl.setText(short_title)
+        self.percent_lbl.setStyleSheet(SLOT_PERCENT_DEFAULT_STYLE)
         self.update_progress(0)
         
         # Worker'ı Başlat
@@ -85,26 +122,35 @@ class DownloadSlotWidget(QWidget):
 
     def on_success(self, video_id, title, size, duration, date):
         self.update_progress(100)
-        self.icon_lbl.setText("✅")
+        self.percent_lbl.setStyleSheet(SLOT_PERCENT_SUCCESS_STYLE)
+        self.icon_btn.setText("✅")
         self.title_lbl.setText(f"Tamamlandı: {title[:25]}...")
         
         # Ana sınıftaki history fonksiyonunu çağırarak thread safe bir şekilde dosyaya yazıyoruz
         self.parent_app.save_to_history(video_id, title, size, duration, date)
-        
         # Log paneline başarılı indirme mesajı gönderiyoruz
-        self.parent_app.relay_log("BİL", f"İndirme Tamamlandı: {title}")
-        
+        self.parent_app.relay_log("BAŞ", f"İndirme Tamamlandı: {title}")
         # 1.5 saniye ekranda ✅ kaldıktan sonra bar kaybolur ve yerini yeni videoya bırakır
         QTimer.singleShot(1500, self.free_slot)
 
     def on_error(self, err_msg):
-        self.icon_lbl.setText("❌")
-        self.title_lbl.setText("İndirme Hatası!")
+        if err_msg == "İptal Edildi":
+            self.icon_btn.setText("❌")
+            self.icon_btn.setStyleSheet(SLOT_ICON_ERROR_STYLE)
+            self.title_lbl.setText("İptal Edildi!")
+            self.set_error_style()
+        else:
+            self.icon_btn.setText("❌")
+            self.icon_btn.setStyleSheet(SLOT_ICON_ERROR_STYLE)
+            self.title_lbl.setText("İndirme Hatası!")
+            self.set_error_style()
+            self.parent_app.relay_log("HTA", f"Hata: {err_msg}")
         
         # 3 saniye sonra kaybolur
         QTimer.singleShot(3000, self.free_slot)
 
     def free_slot(self):
+        self.is_free = True
         self.hide()
         if self.worker:
             self.worker.deleteLater()
@@ -125,16 +171,19 @@ class IndirmeModuluApp(QWidget):
         # Playlist kuyruğu ve aktif thread'leri takip etmek için
         self.queue = []
         self.slots = []
+        self.batch_success_count = 0
 
         self.setup_ui()
 
-    def setup_ui(self):
+    def setup_ui(self): # Arka planın (Card) rengini alması için bu widget'ı saydam yapıyoruz
+        self.setStyleSheet(APP_BG_STYLE)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(40, 40, 40, 40)
-        layout.setSpacing(25)
+        # Ekran daraldığında taşmayı önlemek için genel boşlukları kıstım
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
 
         title_lbl = QLabel("🎥 YouTube Video İndirici")
-        title_lbl.setStyleSheet("color: #E2E8F0; font-size: 26px; font-weight: bold; letter-spacing: 1px;")
+        title_lbl.setStyleSheet(TITLE_LBL_STYLE)
         
         header_layout = QHBoxLayout()
         header_layout.addWidget(title_lbl)
@@ -142,73 +191,31 @@ class IndirmeModuluApp(QWidget):
         
         self.history_btn = QPushButton("📜 Geçmişi Gör")
         self.history_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.history_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #0F172A;
-                border: 1px solid #1E293B;
-                border-radius: 8px;
-                color: #CBD5E1;
-                padding: 8px 15px;
-                font-weight: bold;
-                font-size: 13px;
-            }
-            QPushButton:hover {
-                background-color: #1E293B;
-                border: 1px solid #475569;
-                color: #FFFFFF;
-            }
-        """)
+        self.history_btn.setStyleSheet(HISTORY_BTN_STYLE)
         self.history_btn.clicked.connect(self.show_history_dialog)
         header_layout.addWidget(self.history_btn)
         
         desc_lbl = QLabel("Aynı anda 4 adede kadar video indirebilirsiniz. Playlist linki girildiğinde sıraya alınır.")
-        desc_lbl.setStyleSheet("color: #94A3B8; font-size: 14px;")
+        desc_lbl.setStyleSheet(DESC_LBL_STYLE)
 
         # --- Link Girişi ---
         input_layout = QVBoxLayout()
-        input_layout.setSpacing(10)
+        input_layout.setSpacing(8)
         url_label = QLabel("Video veya Playlist Linki:")
-        url_label.setStyleSheet("color: #CBD5E1; font-weight: bold; font-size: 14px;")
+        url_label.setStyleSheet(URL_LBL_STYLE)
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("Örn: https://www.youtube.com/watch?v=...")
-        self.url_input.setStyleSheet("""
-            QLineEdit {
-                background-color: #030610;
-                border: 2px solid #1E293B;
-                border-radius: 10px;
-                padding: 15px;
-                color: #FFFFFF;
-                font-size: 15px;
-            }
-            QLineEdit:focus {
-                border: 2px solid #B80000;
-                background-color: #060C17;
-            }
-        """)
+        self.url_input.setStyleSheet(URL_INPUT_STYLE)
         input_layout.addWidget(url_label)
         input_layout.addWidget(self.url_input)
 
         # --- Klasör Seçimi ---
         save_layout = QHBoxLayout()
         self.save_path_lbl = QLabel(f"Kayıt Yeri: {self.save_dir}")
-        self.save_path_lbl.setStyleSheet("color: #64748B; font-size: 13px;")
+        self.save_path_lbl.setStyleSheet(SAVE_PATH_LBL_STYLE)
         change_dir_btn = QPushButton("📂 Klasör Değiştir")
         change_dir_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        change_dir_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #0F172A;
-                border: 1px solid #1E293B;
-                border-radius: 8px;
-                color: #CBD5E1;
-                padding: 8px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1E293B;
-                border: 1px solid #475569;
-                color: #FFFFFF;
-            }
-        """)
+        change_dir_btn.setStyleSheet(CHANGE_DIR_BTN_STYLE)
         change_dir_btn.clicked.connect(self.choose_directory)
         save_layout.addWidget(self.save_path_lbl)
         save_layout.addStretch()
@@ -216,7 +223,7 @@ class IndirmeModuluApp(QWidget):
 
         # --- 4'lü Paralel İndirme Slotları (Alt Alta) ---
         self.slots_container = QVBoxLayout()
-        self.slots_container.setSpacing(5)
+        self.slots_container.setSpacing(15) # Slotlar arası mesafeyi belirginleştirdik
         for _ in range(4):
             slot = DownloadSlotWidget(self)
             slot.slot_freed.connect(self.process_queue)
@@ -226,35 +233,18 @@ class IndirmeModuluApp(QWidget):
         # --- İndirme Butonu ---
         self.download_btn = QPushButton("İndirmeyi Başlat")
         self.download_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.download_btn.setFixedHeight(55)
-        self.download_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #B80000;
-                border: none;
-                border-radius: 10px;
-                color: white;
-                font-size: 16px;
-                font-weight: bold;
-                letter-spacing: 1px;
-            }
-            QPushButton:hover {
-                background-color: #D30000;
-            }
-            QPushButton:disabled {
-                background-color: #334155;
-                color: #94A3B8;
-            }
-        """)
+        self.download_btn.setFixedHeight(50)
+        self.download_btn.setStyleSheet(DOWNLOAD_BTN_STYLE)
         self.download_btn.clicked.connect(self.start_download)
 
         layout.addLayout(header_layout)
         layout.addWidget(desc_lbl)
-        layout.addSpacing(15)
+        layout.addSpacing(5)
         layout.addLayout(input_layout)
         layout.addLayout(save_layout)
-        layout.addSpacing(20) # Daha fazla boşluk
+        layout.addSpacing(10) # Klasör ve barlar arası boşluk
         layout.addLayout(self.slots_container)
-        layout.addSpacing(20) # Daha fazla boşluk
+        layout.addSpacing(15) # Buton ve barlar arası boşluk
         layout.addWidget(self.download_btn)
         
         # QWidget yerine standart layout esnemesi kullanıyoruz ki elemanlar ezilmesin
@@ -287,8 +277,7 @@ class IndirmeModuluApp(QWidget):
         for e in entries:
             if self.check_history(e['id']):
                 self.relay_log("UYR", f"Geçildi (Zaten İndirilmiş): {e['title']}")
-            else:
-                to_download.append(e)
+            else: to_download.append(e)
 
         if not to_download:
             self.relay_log("BİL", "Bu linkten indirilecek yeni video bulunamadı.")
@@ -301,7 +290,6 @@ class IndirmeModuluApp(QWidget):
         # Eğer çok dosya varsa bilgi verelim
         if len(self.queue) > 1:
             self.relay_log("BİL", f"Kuyruğa eklendi: {len(self.queue)} video. 4'erli indirilecek.")
-
         self.download_btn.setText("⏳ İndirmeler Devam Ediyor...")
         self.process_queue()
 
@@ -312,14 +300,21 @@ class IndirmeModuluApp(QWidget):
     def process_queue(self):
         # Kuyruk tamamen bittiyse ve aktif inen yoksa butonu aç
         if not self.queue:
-            if all(not s.isVisible() for s in self.slots):
+            if all(s.is_free for s in self.slots):
                 self.reset_ui()
-                self.relay_log("BİL", "Tüm indirme kuyruğu tamamlandı.")
+                self.relay_log("BİL", "=" * 40)
+                self.relay_log("BİL", f"Tüm indirme kuyruğu tamamlandı.")
+                self.relay_log("BİL", f"Toplam {self.batch_success_count} video başarıyla indirildi.")
+                self.relay_log("BİL", "=" * 40)
+                # Sıfırla
+                self.batch_success_count = 0
+                
+                if hasattr(self.window(), 'show_toast'): self.window().show_toast("Tüm videolar başarıyla indirildi!")
             return
 
         # 4 tane slottan boş olanları bul ve kuyruktaki işleri ver
         for slot in self.slots:
-            if not slot.isVisible() and self.queue:
+            if slot.is_free and self.queue:
                 video = self.queue.pop(0)
                 slot.start(video, self.save_dir)
 
@@ -335,13 +330,12 @@ class IndirmeModuluApp(QWidget):
             return False
         with open(self.history_file, 'r', encoding='utf-8') as f:
             for line in f.readlines():
-                if video_id in line:
-                    return True
+                if video_id in line:  return True
         return False
 
-    def save_to_history(self, video_id, title, size, duration, date):
-        # Multi-thread indirme olduğu için dosyaya tek bir noktadan yazmak veriyi güvende tutar
+    def save_to_history(self, video_id, title, size, duration, date): # Multi-thread indirme olduğu için dosyaya tek bir noktadan yazmak veriyi güvende tutar
         if not video_id: return
+        self.batch_success_count += 1
         with open(self.history_file, 'a', encoding='utf-8') as f:
             f.write(f"{video_id} | {title} | {size} | {duration} | {date}\n")
 
@@ -350,48 +344,14 @@ class IndirmeModuluApp(QWidget):
         dialog.setWindowTitle("İndirme Geçmişi")
         dialog.resize(700, 450)
         
-        dialog.setStyleSheet("""
-            QDialog {
-                background-color: #060C17;
-                border: 2px solid #1E293B;
-                border-radius: 10px;
-            }
-            QTableWidget {
-                background-color: #030610;
-                color: #E2E8F0;
-                gridline-color: #1E293B;
-                border: 1px solid #1E293B;
-                border-radius: 6px;
-                font-size: 14px;
-            }
-            QHeaderView::section {
-                background-color: #0F172A;
-                color: #70C4FF;
-                padding: 8px;
-                border: 1px solid #1E293B;
-                font-weight: bold;
-                font-size: 13px;
-            }
-            QTableWidget::item:selected {
-                background-color: #15243B;
-                color: #FFFFFF;
-            }
-            QScrollBar:vertical {
-                background: #030610;
-                width: 12px;
-            }
-            QScrollBar::handle:vertical {
-                background: #1E293B;
-                border-radius: 6px;
-            }
-        """)
+        dialog.setStyleSheet(DIALOG_MAIN_STYLE)
         
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         
         title_lbl = QLabel("📂 Geçmiş İndirilen Videolar")
-        title_lbl.setStyleSheet("color: #E2E8F0; font-size: 20px; font-weight: bold;")
+        title_lbl.setStyleSheet(DIALOG_TITLE_STYLE)
         layout.addWidget(title_lbl)
         
         table = QTableWidget()
@@ -455,19 +415,7 @@ class IndirmeModuluApp(QWidget):
         
         close_btn = QPushButton("Kapat")
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #1E293B;
-                color: white;
-                padding: 10px 25px;
-                border-radius: 6px;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #334155;
-            }
-        """)
+        close_btn.setStyleSheet(DIALOG_CLOSE_BTN_STYLE)
         close_btn.clicked.connect(dialog.accept)
         layout.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignRight)
         

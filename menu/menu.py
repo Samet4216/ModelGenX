@@ -35,20 +35,42 @@ class VerticalCategoryBar(QFrame):
         self.category_buttons = {}
         self.category_indices = {}
         self.active_category_id = None
+        
+        self.is_expanded = False
+        self.collapsed_width = 64
+        self.expanded_width = 200
         self.init_ui()
 
     def init_ui(self):
-        self.setFixedWidth(64)
+        self.setFixedWidth(self.collapsed_width)
         self.setStyleSheet(VERTICAL_BAR_STYLE)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 12, 6, 12)
         layout.setSpacing(18) # K'lar arası yukarı-aşağı boşluk
-        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        # 0. Toggle Butonu (Hamburger)
+        self.toggle_btn = QPushButton("☰")
+        self.toggle_btn.setFixedHeight(32)
+        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.toggle_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                color: #70C4FF;
+                font-size: 20px;
+            }
+            QPushButton:hover {
+                color: #FFFFFF;
+            }
+        """)
+        self.toggle_btn.clicked.connect(self.toggle_menu)
+        layout.addWidget(self.toggle_btn)
 
         # 1. En Üst Logo Butonu (Dashboard'a dönüş)
         self.logo_btn = QPushButton()
-        self.logo_btn.setFixedSize(46, 46)
+        self.logo_btn.setFixedHeight(46)
         self.logo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.logo_btn.setToolTip("Ana Menüye Dön")
         self.logo_btn.setStyleSheet(VERTICAL_LOGO_BTN_STYLE)
@@ -61,7 +83,7 @@ class VerticalCategoryBar(QFrame):
 
         # İnce ayırıcı çizgi
         sep = QFrame()
-        sep.setFixedSize(38, 1)
+        sep.setFixedHeight(1)
         sep.setStyleSheet(VERTICAL_SEP_STYLE)
         layout.addWidget(sep)
 
@@ -70,7 +92,9 @@ class VerticalCategoryBar(QFrame):
             cat_id = cat.get("id", idx + 1)
             
             btn = QPushButton(f"K{cat_id}")
-            btn.setFixedSize(48, 44)
+            btn.setFixedHeight(44)
+            from PyQt6.QtWidgets import QSizePolicy
+            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setToolTip(f"{cat.get('name', '')} ({cat.get('desc', '')})")
             btn.setStyleSheet(get_category_button_style(idx, False))
@@ -79,7 +103,37 @@ class VerticalCategoryBar(QFrame):
             layout.addWidget(btn)
             self.category_buttons[cat_id] = btn
             self.category_indices[cat_id] = idx
+            
         layout.addStretch()
+
+        from PyQt6.QtCore import QVariantAnimation, QEasingCurve
+        self.animation = QVariantAnimation()
+        self.animation.setDuration(280)
+        self.animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        self.animation.valueChanged.connect(self.setFixedWidth)
+
+    def toggle_menu(self):
+        self.is_expanded = not self.is_expanded
+        
+        # Yazıları güncelle
+        for cid, btn in self.category_buttons.items():
+            idx = self.category_indices.get(cid, 0)
+            cat = self.categories[idx]
+            
+            if self.is_expanded:
+                btn.setText(cat.get("name", f"Kategori {cid}"))
+            else:
+                btn.setText(f"K{cid}")
+                
+        # Animasyonu başlat
+        self.animation.stop()
+        if self.is_expanded:
+            self.animation.setStartValue(self.width())
+            self.animation.setEndValue(self.expanded_width)
+        else:
+            self.animation.setStartValue(self.width())
+            self.animation.setEndValue(self.collapsed_width)
+        self.animation.start()
 
     def on_category_pressed(self, cat): # K1-K4 butonlarından birine tıklandığında aktif kategori olarak işaretler ve sinyal gönderir
         self.set_active_category(cat.get("id"))

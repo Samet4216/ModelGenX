@@ -62,7 +62,6 @@ class SystemMetricsReader: #"NVIDIA GPU ve Sistem (CPU/RAM) donanım verilerini 
 
         return metrics
 
-
 class SystemStatusBar(QFrame):
     """
     Alt Cyberpunk Durum Çubuğu:
@@ -111,7 +110,6 @@ class SystemStatusBar(QFrame):
     def update_status(self):
         m = self.metrics_reader.get_metrics()
         parts = []
-
         # GPU
         if m["gpu_util"] is not None: parts.append(f'<span style="color:#5A7699;">GPU</span> <b style="color:#70C4FF;">%{m["gpu_util"]}</b>')
         else: parts.append('<span style="color:#5A7699;">GPU</span> <b style="color:#8CA6BE;">--</b>')

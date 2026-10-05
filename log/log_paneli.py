@@ -8,11 +8,12 @@ from PyQt6.QtGui import QFont
 
 # Log Seviyeleri ve Renk Paleti (Türkçe Standart Tanımlar)
 LOG_LEVELS = {
-    "BİL": ("BİL", "#38BDF8"),  # Bilgi (Açık Mavi)
+    "BİL": ("BİL", "#FFFFFF"),  # Bilgi (Beyaz)
+    "BAŞ": ("BAŞ", "#4ADE80"),  # Başarılı (Yeşil)
     "SİS": ("SİS", "#70C4FF"),  # Sistem (Cyan)
     "UYR": ("UYR", "#F59E0B"),  # Uyarı (Turuncu)
     "HTA": ("HTA", "#EF4444"),  # Hata (Kırmızı)
-    "DTY": ("DTY", "#8CA6BE"),  # Detay (Gri)
+    "DTY": ("DTY", "#9BAEBC"),  # Detay (Soluk Gri)
 }
 
 class LogPanelWidget(QWidget):
@@ -145,6 +146,25 @@ class LogPanelWidget(QWidget):
                 font-size: 12px;
                 padding: 10px;
             }
+            QTextEdit#LogTextEdit QScrollBar:vertical {
+                border: none;
+                background: transparent;
+                width: 6px;
+                margin: 0px 0px 0px 0px;
+            }
+            QTextEdit#LogTextEdit QScrollBar::handle:vertical {
+                background: #15243B;
+                border-radius: 3px;
+                min-height: 20px;
+            }
+            QTextEdit#LogTextEdit QScrollBar::handle:vertical:hover {
+                background: #70C4FF;
+            }
+            QTextEdit#LogTextEdit QScrollBar::add-line:vertical,
+            QTextEdit#LogTextEdit QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+            }
         """)
         self.log_output.setReadOnly(True)
         # Performans için maksimum blok (satır) sayısı (HTML tabanlı render olduğu için faydalı, ama asıl limiti _log_history'de yöneteceğiz)
@@ -198,8 +218,8 @@ class LogPanelWidget(QWidget):
         html_str = (
             f'<div style="margin-bottom: 10px;">'
             f'<span style="color: #4A6572; font-size: 11px; font-family: Consolas, monospace;">{time_str}Z</span><br>'
-            f'<b style="color: {color}; font-size: 12px; font-family: Consolas, monospace;">{tag}</b> '
-            f'<span style="color: #E4F9ED; font-size: 12px;">{text}</span>'
+            f'<b style="color: {color}; font-size: 12px; font-family: Consolas, monospace;">[{tag}]</b> '
+            f'<span style="color: {color}; font-size: 12px;">{text}</span>'
             f'</div>'
         )
         
@@ -278,9 +298,49 @@ class LogPanelWidget(QWidget):
         copy_action = menu.addAction("Kopyala")
         select_all_action = menu.addAction("Tümünü Seç")
         menu.addSeparator()
-        clear_action = menu.addAction("Temizle")
+        
+        delete_selected_action = menu.addAction("Seçili Satırı Sil")
+        clear_action = menu.addAction("Tümünü Temizle")
+        
         action = menu.exec(self.log_output.mapToGlobal(pos))
         
         if action == copy_action: self.log_output.copy()
         elif action == select_all_action: self.log_output.selectAll()
+        elif action == delete_selected_action: self.delete_selected_log()
         elif action == clear_action: self.clear_logs()
+
+    def delete_selected_log(self):
+        """Kullanıcının seçtiği veya sağ tıkladığı log satırını siler."""
+        cursor = self.log_output.textCursor()
+        
+        # Eğer manuel bir seçim yapılmamışsa, fareyle sağ tıklanan bloğu (paragrafı) otomatik seç
+        if not cursor.hasSelection():
+            cursor.select(cursor.SelectionType.BlockUnderCursor)
+            
+        if cursor.hasSelection():
+            selected_text = cursor.selectedText()
+            
+            # 1. Ekranda görsel olarak sil
+            self.log_output.setReadOnly(False)
+            cursor.removeSelectedText()
+            self.log_output.setReadOnly(True)
+            
+            # 2. Arka plan hafızasından (_log_history) da sil ki arama yapılınca geri gelmesin
+            # Seçili metnin içinde geçen "Z" (örn: 15:47:00Z) damgasından yola çıkarak bulabiliriz
+            # Veya düz mantıkla, seçilen metnin en az 5 harfi raw string içinde varsa onu siliyoruz
+            clean_text = selected_text.replace('\u2029', '\n').strip()
+            if len(clean_text) > 5:
+                # Orijinal listede kalması gerekenleri filtreliyoruz
+                self._log_history = [
+                    log for log in self._log_history 
+                    if not self._is_match(clean_text, log["raw"], log["html"])
+                ]
+
+    def _is_match(self, clean_text, raw_str, html_str):
+        # Seçili metin raw formatın veya html'in bir parçasıysa eşleşme say
+        parts = clean_text.split('\n')
+        # Sadece zaman damgası veya hata mesajı bile geçiyorsa eşleşir
+        for part in parts:
+            if len(part.strip()) > 5 and part.strip() in raw_str:
+                return True
+        return False
