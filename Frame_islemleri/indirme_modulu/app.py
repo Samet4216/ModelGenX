@@ -182,7 +182,7 @@ class IndirmeModuluApp(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        title_lbl = QLabel("🎥 YouTube Video İndirici")
+        title_lbl = QLabel("YouTube Video İndirici")
         title_lbl.setStyleSheet(TITLE_LBL_STYLE)
         
         header_layout = QHBoxLayout()

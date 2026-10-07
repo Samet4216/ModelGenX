@@ -101,16 +101,40 @@ class MainWindow(QMainWindow):
         top_header_row.addWidget(brand_container)
         top_header_row.addStretch()
 
-        # SAĞ: Tarih & Saat
+        # SAĞ: Tarih & Saat ve Çıkış Butonu
+        right_header_layout = QVBoxLayout()
+        right_header_layout.setSpacing(10)
+        
         self.datetime_label = QLabel()
         self.datetime_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         self.datetime_label.setStyleSheet("""
             background: transparent;
             border: none;
             color: #8CA6BE;
-            padding: 8px 0px;
         """)
-        top_header_row.addWidget(self.datetime_label, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+        right_header_layout.addWidget(self.datetime_label, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+        
+        self.dash_exit_btn = QPushButton("Uygulamadan Çık")
+        self.dash_exit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.dash_exit_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #5E1015;
+                color: #FF8A8A;
+                border: 1px solid #B31D28;
+                border-radius: 6px;
+                padding: 6px 16px;
+                font-weight: bold;
+                font-size: 10pt;
+            }
+            QPushButton:hover {
+                background-color: #B31D28;
+                color: white;
+            }
+        """)
+        self.dash_exit_btn.clicked.connect(lambda: QApplication.instance().quit())
+        right_header_layout.addWidget(self.dash_exit_btn, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+        
+        top_header_row.addLayout(right_header_layout)
         layout.addLayout(top_header_row)
 
         # Altına İnce Gradyanlı Ayırıcı Çizgi (Divider)
@@ -285,6 +309,12 @@ class MainWindow(QMainWindow):
                 from Frame_islemleri.indirme_modulu.app import IndirmeModuluApp
                 mod_app = IndirmeModuluApp()
                 # Modülden gelen log sinyallerini ana penceredeki log paneline bağla
+                mod_app.send_log_signal.connect(lambda level, msg: self.log_panel_widget.append_log(msg, level))
+                self.module_instances[module_key] = mod_app
+                self.module_content_area.addWidget(mod_app)
+            elif cat_name == "Kategori 1" and mod_name == "Modül 1.2":
+                from Frame_islemleri.paylastirma_modulu.app import PaylastirmaModuluApp
+                mod_app = PaylastirmaModuluApp()
                 mod_app.send_log_signal.connect(lambda level, msg: self.log_panel_widget.append_log(msg, level))
                 self.module_instances[module_key] = mod_app
                 self.module_content_area.addWidget(mod_app)

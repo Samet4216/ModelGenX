@@ -1,0 +1,62 @@
+[
+    {
+        "name": "Samet",
+        "weight": 1.0,
+        "active": true,
+        "role": "Tümü",
+        "score": 100
+    },
+    {
+        "name": "Meryem",
+        "weight": 1.0,
+        "active": false,
+        "role": "Tümü",
+        "score": 100
+    },
+    {
+        "name": "Sümeyye",
+        "weight": 1.0,
+        "active": false,
+        "role": "Tümü",
+        "score": 100
+    },
+    {
+        "name": "Sümeyra",
+        "weight": 1.0,
+        "active": false,
+        "role": "Tümü",
+        "score": 100
+    },
+    {
+        "name": "Hilal",
+        "weight": 1.0,
+        "active": true,
+        "role": "Tümü",
+        "score": 100
+    },
+    {
+        "name": "Hayrullah",
+        "weight": 1.0,
+        "active": true,
+        "role": "Tümü",
+        "score": 100
+    },
+    {
+        "name": "Battal",
+        "weight": 1.0,
+        "active": true,
+        "role": "Tümü"
+    },
+    {
+        "name": "Damla",
+        "weight": 1.0,
+        "active": true,
+        "role": "Tümü"
+    },
+    {
+        "name": "Elif",
+        "weight": 1.0,
+        "active": true,
+        "role": "Tümü"
+    }
+]

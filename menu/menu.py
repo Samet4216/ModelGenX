@@ -105,6 +105,28 @@ class VerticalCategoryBar(QFrame):
             self.category_indices[cat_id] = idx
             
         layout.addStretch()
+        
+        self.sidebar_exit_btn = QPushButton("✕")
+        self.sidebar_exit_btn.setFixedHeight(44)
+        self.sidebar_exit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.sidebar_exit_btn.setToolTip("Uygulamadan Çık")
+        self.sidebar_exit_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                color: #FF5252;
+                font-size: 16px;
+                font-weight: bold;
+                border: 1px solid transparent;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #5E1015;
+                border: 1px solid #B31D28;
+            }
+        """)
+        from PyQt6.QtWidgets import QApplication
+        self.sidebar_exit_btn.clicked.connect(lambda: QApplication.instance().quit())
+        layout.addWidget(self.sidebar_exit_btn)
 
         from PyQt6.QtCore import QVariantAnimation, QEasingCurve
         self.animation = QVariantAnimation()
@@ -124,6 +146,11 @@ class VerticalCategoryBar(QFrame):
                 btn.setText(cat.get("name", f"Kategori {cid}"))
             else:
                 btn.setText(f"K{cid}")
+                
+        if self.is_expanded:
+            self.sidebar_exit_btn.setText("Çıkış")
+        else:
+            self.sidebar_exit_btn.setText("✕")
                 
         # Animasyonu başlat
         self.animation.stop()
