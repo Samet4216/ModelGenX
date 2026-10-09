@@ -277,90 +277,11 @@ class OutputConfigWidget(QGroupBox):
             self.preview_lbl.setText(html)
             return
 
-        total_extracted_all_videos = sum(
-            (int(v.get("total_frames", 100)) // int(v.get("interval", 1))) 
-            for v in videos
-        )
         
-        valid_annotators = [a for a in annotators if a.get("active", True)]
-        total_weight = sum(a.get("weight", 1.0) for a in valid_annotators)
+        from Frame_islemleri.paylastirma_modulu.distribution_engine import calculate_distribution
+        dist_data = calculate_distribution(videos, annotators)
+        assignments = dist_data['ui_assignments']
         
-        quotas = []
-        for a in valid_annotators:
-            quota = int(total_extracted_all_videos * (a.get('weight', 1.0) / total_weight))
-            quotas.append({
-                'person': a['name'],
-                'role_filter': a.get('role', 'Tümü'),
-                'target': quota,
-                'current': 0
-            })
-            
-        if quotas:
-            quotas[-1]['target'] += total_extracted_all_videos - sum(q['target'] for q in quotas)
-            
-        assignments = []
-        ann_idx = 0
-        
-        for vid in videos:
-            v_name = os.path.splitext(vid["name"])[0]
-            
-            try:
-                tf = int(vid.get("total_frames", 100))
-            except:
-                tf = 100
-                
-            try:
-                iv = int(vid.get("interval", 1))
-            except:
-                iv = 1
-                
-            v_frames = tf // iv
-            v_split = vid.get("split", "train")
-            
-            frames_left = v_frames
-            current_start = 1
-            
-            while frames_left > 0 and ann_idx < len(quotas):
-                ann = quotas[ann_idx]
-                
-                if ann['role_filter'] not in ["Tümü", v_split]:
-                    ann_idx += 1
-                    continue
-                    
-                space = ann['target'] - ann['current']
-                if space <= 0:
-                    ann_idx += 1
-                    continue
-                    
-                take = min(frames_left, space)
-                
-                assignments.append({
-                    "person": ann['person'],
-                    "role": v_split,
-                    "video": v_name,
-                    "frames": take,
-                    "start": current_start
-                })
-                
-                ann['current'] += take
-                frames_left -= take
-                current_start += take
-                
-                if ann['current'] >= ann['target']:
-                    ann_idx += 1
-                    
-            if frames_left > 0:
-                for i in range(len(quotas)-1, -1, -1):
-                    if quotas[i]['role_filter'] in ["Tümü", v_split]:
-                        assignments.append({
-                            "person": quotas[i]['person'],
-                            "role": v_split,
-                            "video": v_name,
-                            "frames": frames_left,
-                            "start": current_start
-                        })
-                        break
-                        
         if not assignments:
             html += "&nbsp;&nbsp;&nbsp;&nbsp;<span style='color: #FF5252;'>⚠️ Hiçbir geçerli eşleşme bulunamadı! Rolleri kontrol edin.</span><br>"
             self.preview_lbl.setText(html)

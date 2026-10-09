@@ -28,76 +28,28 @@ class FrameExtractionThread(QThread):
             base_target = os.path.join(self.output_dir, self.output_name)
             os.makedirs(base_target, exist_ok=True)
             
-            total_extracted_all_videos = sum(v['total_frames'] // v['interval'] for v in self.videos)
-            processed_frames = 0
             
             # İstatistikleri tutmak için
             stats = {a['name']: 0 for a in self.annotators}
             
-            # --- GLOBAL KOTA HESAPLAMASI ---
-            valid_annotators = [a for a in self.annotators if a.get('active', True)]
-            total_weight = sum(a.get('weight', 1.0) for a in valid_annotators)
-            
-            quotas = []
-            for a in valid_annotators:
-                quota = int(total_extracted_all_videos * (a.get('weight', 1.0) / total_weight))
-                quotas.append({
-                    'person': a['name'],
-                    'role_filter': a.get('role', 'Tümü'),
-                    'target': quota,
-                    'current': 0
-                })
-                
-            if quotas:
-                quotas[-1]['target'] += total_extracted_all_videos - sum(q['target'] for q in quotas)
-                
-            ann_idx = 0
+            # --- ORTAK KOTA VE DAĞITIM HESAPLAMASI ---
+            from Frame_islemleri.paylastirma_modulu.distribution_engine import calculate_distribution
+            dist_data = calculate_distribution(self.videos, self.annotators)
+            total_extracted_all_videos = dist_data['total_frames']
             
             for video in self.videos:
                 vid_path = video['path']
                 vid_name = os.path.splitext(video['name'])[0]
                 vid_split = video['split']
-                vid_total_frames = video['total_frames']
                 vid_interval = video['interval']
-                vid_extracted_frames = vid_total_frames // vid_interval
                 
-                self.log_msg.emit("BİLGİ", f"{vid_name} işleniyor... (Tahmini Çıkacak Kare: {vid_extracted_frames})")
-                
-                # Bu video için kim ne kadar alacak hesapla
-                frames_left_in_vid = vid_extracted_frames
-                vid_assignments = []
-                
-                while frames_left_in_vid > 0 and ann_idx < len(quotas):
-                    ann = quotas[ann_idx]
-                    
-                    if ann['role_filter'] not in ["Tümü", vid_split]:
-                        ann_idx += 1
-                        continue
-                        
-                    space = ann['target'] - ann['current']
-                    if space <= 0:
-                        ann_idx += 1
-                        continue
-                        
-                    take = min(frames_left_in_vid, space)
-                    vid_assignments.extend([ann['person']] * take)
-                    
-                    ann['current'] += take
-                    frames_left_in_vid -= take
-                    
-                    if ann['current'] >= ann['target']:
-                        ann_idx += 1
-                        
-                # Artık kalırsa son geçerli kişiye ekle
-                if frames_left_in_vid > 0:
-                    for i in range(len(quotas)-1, -1, -1):
-                        if quotas[i]['role_filter'] in ["Tümü", vid_split]:
-                            vid_assignments.extend([quotas[i]['person']] * frames_left_in_vid)
-                            break
+                vid_assignments = dist_data['video_assignments'].get(vid_path, [])
                 
                 if not vid_assignments:
-                    self.log_msg.emit("UYARI", f"{vid_name} ({vid_split}) için uygun kişi bulunamadı. Atlanıyor.")
+                    self.log_msg.emit('UYARI', f'{vid_name} ({vid_split}) için uygun kişi bulunamadı. Atlanıyor.')
                     continue
+                
+                self.log_msg.emit('BİLGİ', f'{vid_name} işleniyor... (Tahmini Çıkacak Kare: {len(vid_assignments)})')
                 
                 cap = cv2.VideoCapture(vid_path)
                 frame_idx = 0
