@@ -4,7 +4,7 @@
   <p><b>Masaüstü Yapay Zeka Veri Seti Üretim Aracı</b></p>
 </div>
 
----
+--- 
 
 ## 📖 Proje Hakkında
 **ModelGenX**, yapay zeka modelleri eğitmek için gereken veri setlerini hızlı, esnek ve modüler bir şekilde oluşturmanızı sağlayan modern bir masaüstü uygulamasıdır. 
