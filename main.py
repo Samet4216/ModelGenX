@@ -318,6 +318,12 @@ class MainWindow(QMainWindow):
                 mod_app.send_log_signal.connect(lambda level, msg: self.log_panel_widget.append_log(msg, level))
                 self.module_instances[module_key] = mod_app
                 self.module_content_area.addWidget(mod_app)
+            elif cat_name == "Kategori 4" and mod_name == "Modül 4.1":
+                from dataset_islemleri.veriseti_analiz.app import VeriSetiAnalizApp
+                mod_app = VeriSetiAnalizApp()
+                mod_app.send_log_signal.connect(lambda level, msg: self.log_panel_widget.append_log(msg, level))
+                self.module_instances[module_key] = mod_app
+                self.module_content_area.addWidget(mod_app)
             else:
                 # Boş veya henüz yapılmamış modüller için varsayılan mesaj
                 empty_lbl = QLabel("Bu modül henüz sisteme entegre edilmedi.")
