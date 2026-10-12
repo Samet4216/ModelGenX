@@ -173,3 +173,4 @@ class DownloadWorker(QThread):
                 self.progress_updated.emit(98) # Ses bitti, birleştirme başlıyor
             
             self.total_downloaded_bytes += d.get('total_bytes', d.get('downloaded_bytes', 0))
+ 
